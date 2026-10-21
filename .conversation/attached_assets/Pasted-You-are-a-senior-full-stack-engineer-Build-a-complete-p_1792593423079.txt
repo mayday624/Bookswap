@@ -1,0 +1,212 @@
+You are a senior full-stack engineer. Build a complete, production-quality app called "BookSwap" (you may suggest a better name). Work in milestones. After each milestone: run the app, test the main flow end to end in the browser, fix errors, give me a 3-line summary, update TODO.md (milestone status, so work can resume if interrupted), and continue to the next milestone without waiting for me unless you are blocked. Prefer simple, proven solutions over clever ones. Do not over-engineer. Never break features from earlier milestones. Put every feature from Milestone 9 and 10 behind a simple feature flag in a config file so I can switch it off.
+
+# 1. PRODUCT SUMMARY
+BookSwap is a mobile-first web app (installable PWA) where people exchange books they have finished reading. Users list books they are willing to give away, add a wishlist of books they want, get matched with nearby people, chat, agree on a meeting place, and swap in person. Later milestones add communities, textbook/set-book support, WhatsApp sharing, phone verification, referrals, and reading streaks. The target users are communities in Kenya (e.g., Narok, Nairobi), mostly on Android phones with slow or limited data, so the app must be lightweight and fast.
+
+# 2. TECH STACK
+- Frontend: React + Vite + TypeScript, Tailwind CSS, React Router. Lazy load routes. No heavy libraries.
+- Backend: Supabase (Postgres, Auth, Storage, Realtime). Row Level Security on every table.
+- PWA: manifest, service worker, installable, offline-friendly shell, small bundle size.
+- Book data: Open Library API (ISBN and title search, covers), with fallback to manual entry.
+- ISBN scanning: browser BarcodeDetector API where available, fallback library (e.g., html5-qrcode), and always a manual ISBN/title entry option.
+- Location: browser Geolocation API plus manual selection of town/area. Store only approximate coordinates (rounded to ~1 km) and a text area name. Never expose exact addresses.
+- Environment variables for all keys. Provide .env.example and a clear README (create Supabase project, run migrations, set env vars, run locally, deploy to Vercel or Netlify).
+
+# 3. CORE FEATURES (Milestones 1-8)
+
+## Auth and profile
+- Sign up / log in with email + password and Google sign-in.
+- Profile: display name, avatar, short bio, town/area, favorite genres. Edit profile, log out, delete account.
+
+## Books (listings)
+- Add a book: scan ISBN or search by title, auto-fill title, author, cover, description.
+- Fields: condition (Like new / Good / Fair / Worn), genre, language, optional personal note, up to 3 photos.
+- Status: Available, Reserved, Swapped. Edit and delete own listings.
+- "My Shelf" page showing my books by status.
+
+## Wishlist
+- Add wanted books (title/author/ISBN, optional genre-only wishes like "any thriller"). Edit and remove items.
+
+## Discover and search
+- Home feed of available books near me, sorted by distance.
+- Search by title/author; filter by genre, condition, language, and distance (5 km, 20 km, 50 km, anywhere).
+- Book detail page: cover, details, condition photos, owner summary and rating, approximate distance, "Request swap" button.
+
+## Matching
+- "Matches for you" page:
+  1. Perfect match: another user has a book on my wishlist AND wants a book I have.
+  2. One-way match: someone nearby has a book on my wishlist.
+- Notification (in-app, optional browser push) when a new book matching my wishlist is listed nearby.
+
+## Swap flow
+- Request a swap: choose one of my available books to offer, or use a credit.
+- Owner can accept, decline, or counter-offer.
+- When accepted, both books become Reserved and a chat opens.
+- Both users propose and confirm a meeting place and time in the chat.
+- After meeting, both tap "Confirm swap completed". When both confirm, books become Swapped and each can rate the other.
+- Either user can cancel before completion, which releases the books back to Available.
+
+## Credit system (solves one-to-one matching)
+- Each completed swap where I give a book earns me 1 credit. I can spend 1 credit to request any book from an owner who accepts credit swaps.
+- Owners choose per listing: "Swap for a book only" or "Swap for a book or a credit".
+- New users start with 0 credits. Show a clear explanation of how credits work. Keep a credit_transactions history table.
+
+## Chat
+- Real-time 1-to-1 chat per swap using Supabase Realtime. Text messages, unread counts, timestamps.
+- Quick actions in chat: "Suggest meeting place", "Confirm swap completed".
+- Never reveal phone numbers or exact locations unless the user chooses to.
+
+## Ratings and trust
+- After a completed swap, each user rates the other 1-5 stars with optional comment.
+- Show average rating, completed swap count, and a "Trusted swapper" badge after 5+ swaps with rating 4.0 or above.
+- "Report a problem" option on swaps (e.g., no-show).
+
+## Safety
+- Safety tips screen before the first swap (public places, daytime, tell a friend, inspect the book).
+- Suggest public meeting spot types (library, school, cafe, church, market).
+- Report and block users; reported users are hidden from the reporter.
+- is_admin flag and a simple admin page to review reports and suspend users.
+
+## Notifications
+- In-app notification center: new swap request, accepted/declined, new message, wishlist match, swap completed, new rating.
+
+# 4. DATABASE (SQL migrations in /supabase/migrations, one file per milestone)
+Base tables: profiles, books, book_photos, wishlist_items, swap_requests, swaps, messages, credit_transactions, ratings, notifications, reports, blocks. Use proper foreign keys, indexes, timestamps.
+- RLS: users edit only their own data, see only messages of their own swaps, and see public listings only from non-suspended users.
+- Postgres functions/views for: nearby books by distance (haversine on rounded coordinates), perfect-match detection, credit balance, average rating.
+- Seed script: ~10 sample users and ~40 sample books around Narok and Nairobi so the app can be demoed immediately.
+
+# 5. UI/UX REQUIREMENTS
+- Mobile-first, clean, friendly, warm bookish design (soft neutral background, one strong accent color, rounded cards, large tap targets).
+- Bottom navigation: Discover, Matches, Add Book (center), Chats, Profile.
+- Skeleton loaders, helpful empty states, clear error messages, toasts.
+- Compress images on upload (max ~800 px, WebP/JPEG).
+- Light and dark mode. Accessible (semantic HTML, labels, contrast).
+- English by default, with all UI text in an i18n file so Swahili can be added later.
+
+# 6. MILESTONES
+M1. Project setup, Supabase schema + RLS + seed data, auth, profile, PWA shell, bottom navigation
+M2. Add/edit books with ISBN scan and Open Library lookup, My Shelf, photo upload
+M3. Wishlist, Discover feed with search/filters/distance, book detail page
+M4. Swap requests, accept/decline, credit system, swap status logic
+M5. Real-time chat, meeting proposals, swap completion confirmation
+M6. Matching engine and notifications
+M7. Ratings, trusted badge, report/block, admin page, safety screens
+M8. Polish: performance, offline shell, error handling, empty states, accessibility, README, deployment instructions
+M9. Growth features (9A WhatsApp sharing, 9B Set books and textbooks, 9C Community hubs, 9D Phone OTP verification, 9E Referral credits)
+M10. Reading streaks (10A Currently reading and personal streak, 10B Reading buddies)
+
+Start now by briefly presenting your plan and folder structure, then begin Milestone 1. Do M9 and M10 only after M1-M8 are complete and stable.
+
+---
+
+# MILESTONE 9: GROWTH FEATURES
+
+Use the same stack, RLS rules, UI style, i18n file, and folder structure. Work in sub-milestones 9A to 9E. After each: run the app, test the main flow, fix errors, update TODO.md and README, give a 3-line summary, then continue. Create one new migration file per sub-milestone.
+
+## 9A. WhatsApp sharing
+- Add a Share button on: book detail page, My Shelf (share my whole shelf), community page, and profile page.
+- Use the Web Share API where available; otherwise fall back to a WhatsApp link (https://wa.me/?text=...) plus a "Copy link" button.
+- Prefilled message example: "I'm giving away '{Book Title}' on BookSwap near {Area}. Want to swap? {link}"
+- Create public shareable pages for books, shelves, and communities (routes like /b/:id, /u/:username, /c/:slug). They must be viewable without login (approximate area only, never exact location), with a clear "Log in to request a swap" button.
+- Link previews: shared links must show a proper preview on WhatsApp (title, cover image, short description). Because this is a single-page app, implement Open Graph and Twitter meta tags through a serverless or edge function (Vercel or Supabase Edge Functions) that returns correct meta tags for these routes. Document how it works in the README.
+- Track share events in a shares table (user_id, type, target_id, created_at).
+
+## 9B. Set books and textbook category
+- Add a "category" field to books and wishlist items: General, KCSE / Secondary, CBC / Primary, University / College, Children, Religious, Other.
+- For textbook categories add optional fields: class or form (Grade 1-9, Form 1-4, Year 1-4), subject, curriculum (8-4-4, CBC, University), publisher, edition, ISBN.
+- Add filters in Discover and Search for category, class/form, subject, curriculum.
+- Create a curated "set_books" table (title, author, class/form, subject, curriculum, year). Seed it with 30-40 realistic examples (common KCSE English and Kiswahili set books and typical secondary textbooks). Mark clearly in a code comment and in the README that this is SAMPLE data I must verify and replace with the official current list.
+- On the Add Book screen, let users pick from the set-books list (autofills fields) or add their own.
+- Add a "Textbooks and set books" shortcut card at the top of Discover.
+- Wishlist matching must also work for textbooks (same title/ISBN + class).
+- Add a "Back to school" sort showing the most in-demand textbooks (count of wishlist requests per book).
+
+## 9C. Community hubs
+- Communities: name, slug, type (School, University, Church, Town, Book club, Workplace, Other), description, logo, approximate area, visibility (Public, or Private with invite code), creator.
+- Any user can create up to 3 communities (anti-spam) and join multiple. Roles: owner, moderator, member. Owners/moderators can remove members and remove listings from the community.
+- Community page tabs: Books (member listings), Members, Wanted (members' wishlists), About.
+- A toggle on each listing lets the owner choose which communities it shows in. Add a "Community only" visibility option so a listing appears only to community members.
+- Discover gets a community filter ("All nearby" / one of my communities).
+- Join by search, invite code, or shared link (/c/:slug). Private communities require the code or owner approval.
+- Community cards show member count and number of available books.
+- Member list shows only display name, avatar, rating, swap count.
+- is_verified flag (set manually by admin) with a small badge for official school/institution hubs.
+- RLS: private community content visible to members only; only owners and moderators can edit settings or remove members.
+- Seed 3 sample communities with members and books around Narok and Nairobi.
+- Members can report a community; surface these in the existing admin page.
+
+## 9D. Phone number OTP verification
+- Use Supabase phone auth with an SMS provider (Africa's Talking or Twilio). Never hardcode keys; use environment variables. Document in the README: enabling the phone provider in Supabase, configuring the SMS provider, expected cost per SMS, and testing with a test number.
+- "Verify your phone number" step in the profile with Kenyan number validation and normalization to +254 (accept 07xx, 01xx, +254).
+- 6-digit OTP, 60-second resend cooldown, max 5 OTPs per phone per day to control SMS costs.
+- Store the verified phone privately. Never show it publicly or in chat. Public profile exposes only phone_verified (boolean) and timestamp.
+- Show a "Verified" badge on profile, listings, and chats.
+- Configurable rules in the config file: unverified users can browse and list books but must verify before requesting a swap, accepting a swap, or using credits. Enforce server-side (RLS or database function), not only in the UI.
+- One verified phone number can link to only one account.
+- Development mode flag that bypasses real SMS and accepts a fixed test code (e.g., 123456) ONLY when the environment is "development".
+- Friendly error messages: invalid number, wrong code, expired code, provider failure.
+
+## 9E. Referral credits
+- Each user gets a unique referral code and share link (/join?ref=CODE) with a Share on WhatsApp button (reuse 9A).
+- Remember the referrer through signup, including after email verification or OTP.
+- Reward: when the invited friend completes their FIRST swap (both confirmed), both inviter and friend receive +1 credit, recorded in credit_transactions with reason "referral_reward".
+- Anti-abuse: friend must have a verified phone; no self-referral; one reward per invited account; a verified phone counts only once; cap of 10 referral rewards per inviter (configurable); suspended users earn nothing.
+- Referrals screen under Profile: my code and link, people invited and their status (Signed up / Verified / First swap done), credits earned from referrals, and a clear explanation of how it works.
+- In-app notifications: "Your friend {name} joined", "You earned 1 credit, {name} completed their first swap".
+- Admin page: top referrers and flagged suspicious patterns (many referrals from the same device or area in a short time).
+
+## Testing for Milestone 9
+- Tests: referral reward logic (each anti-abuse rule), phone number normalization, OTP rate limits, community role permissions, textbook filters.
+- RLS tests: a non-member cannot read a private community's books; an unverified user cannot request a swap; a user cannot read another user's phone number.
+
+---
+
+# MILESTONE 10: READING STREAKS AND READING BUDDIES
+
+Do this after Milestone 9 is stable. Work in 10A then 10B.
+
+## 10A. Currently reading and personal streak
+- Users can mark any book as "Currently reading" (from a book detail page, My Shelf, or Open Library search). It does NOT need to be a swap listing.
+- Fields: book, start date, optional total pages, optional current page, status (Reading / Finished / Paused).
+- A "Reading" section on Profile and My Shelf shows current books with a simple progress bar.
+- When I mark a book Finished, prompt: "Want to list it for swap?" and prefill the Add Book form. This connects reading to the core swap loop.
+- Daily check-in: one tap "I read today" (optionally log pages or minutes).
+- Streak counter = consecutive days with a check-in. Show current streak, longest streak, and a 30-day calendar heatmap.
+- Rules: use the user's local timezone for day boundaries; 1 "streak freeze" per week so one missed day does not reset the streak; gentle message when a streak is at risk.
+- Milestone badges at 3, 7, 30, 100 days, shown on the profile.
+- Optional daily reminder (in-app, browser push if allowed). Reminder time is user-configurable and OFF by default.
+- UI: streak flame icon with count in the Home top bar; a "Reading" card on the Home feed with today's check-in button, current book, and progress. No heavy animation libraries; a small confetti/flame effect only on milestone badges.
+
+## 10B. Reading buddies (same book)
+- On every book detail page, show "X people are reading this book now" (only users who allow it publicly).
+- Users can join a Reading Buddies group for a specific book (identified by ISBN or Open Library ID so different editions match).
+- Two ways to start: join an open group for that book, or create a group and invite friends or nearby users via a share link.
+- Group size 2-10. Groups are "Open" or "Invite only".
+- Each group has: member list with each person's progress (page or percent), a shared group streak, and a group chat using the existing Supabase Realtime chat setup.
+- Group streak counts consecutive days where at least ONE member checked in (encouraging, not punishing). Show each member's individual streak and a gentle "nudge" button for members who have not read today.
+- Spoiler protection: group messages can be tagged with a chapter or page number; messages beyond a member's current progress are hidden until they tap to reveal.
+- Weekly group summary notification: who read the most days, group streak status.
+- "Find readers nearby reading this book" using the same approximate-location logic (never exact addresses). Suggest an optional in-person meetup for finished groups, reusing the safety tips screen.
+- Reading Buddies screen listing my groups and suggested groups.
+- Tip for scope: if credits are limited, drop spoiler protection and weekly summaries for version 1.
+
+## Database additions for Milestone 10
+Tables: reading_sessions (user_id, book_ref, status, current_page, total_pages, started_at, finished_at), reading_checkins (user_id, reading_id, date, pages_read, minutes_read), streaks (user_id, current_streak, longest_streak, last_checkin_date, freezes_available), reading_groups (book_ref, name, visibility, created_by, max_members), reading_group_members (group_id, user_id, joined_at, progress), reading_group_messages (group_id, user_id, body, spoiler_page, created_at), badges (user_id, type, earned_at).
+- RLS: users see only their own check-ins; group content visible only to group members; open groups discoverable by everyone.
+- Postgres functions or scheduled logic for: streak calculation with freeze handling, group streak calculation, readers-per-book count.
+- Extend the seed script with sample reading sessions, two sample groups, and a few streaks.
+
+## Testing for Milestone 10
+- Streak logic: consecutive days, a missed day, a freeze used, timezone boundaries, group streak.
+- RLS: a non-member cannot read group messages.
+
+---
+
+# QUALITY RULES (apply to everything)
+- Validate all inputs on client and server (RLS and constraints). Never commit secrets.
+- Keep components small and organized by feature (/src/features/books, /swaps, /chat, /communities, /reading, etc.).
+- Write key tests for swap state transitions, credit calculation, and matching logic, in addition to the tests listed above.
+- Keep the app lightweight: lazy load routes, compress images, no new heavy libraries.
+- Update the seed script, README, and TODO.md as you go.
+- At the end, give me: a list of what was built, how to run it, how to deploy it, the environment variables I must set, the manual steps I must do outside the code (SMS provider setup, social-preview deployment, replacing the sample set-books data), known limitations, and recommended next steps.
