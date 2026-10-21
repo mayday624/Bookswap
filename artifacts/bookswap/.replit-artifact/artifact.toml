@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "BookSwap"
+description = "A lightweight, mobile-first book exchange for Kenyan communities. List books, find nearby readers, and arrange safe in-person swaps."
+version = "1.0.0"
+id = "artifacts/bookswap"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23916
+
+[services.development]
+run = "pnpm --filter @workspace/bookswap run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bookswap", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/bookswap/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23916"
+BASE_PATH = "/"
